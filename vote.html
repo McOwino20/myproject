@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>School Election</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root{
+  --bg:#020617;
+  --glass:rgba(15,23,42,.6);
+  --border:rgba(148,163,184,.15);
+  --accent:#38bdf8;
+  --gold:#facc15;
+  --text:#e5e7eb;
+  --muted:#94a3b8;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Poppins,system-ui;
+  background:radial-gradient(900px 500px at 10% -10%,#1e293b55,transparent),
+             radial-gradient(700px 400px at 90% 10%,#38bdf833,transparent),
+             var(--bg);
+  color:var(--text);
+}
+.app{max-width:420px;margin:auto;padding:14px}
+h1{text-align:center;font-size:17px;margin:6px 0}
+.timer{text-align:center;font-size:12px;color:var(--gold);margin-bottom:10px}
+.card{
+  background:var(--glass);
+  backdrop-filter:blur(16px);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:12px;
+  margin-bottom:12px;
+}
+.input{
+  display:flex;gap:8px;align-items:center;
+  background:#020617;border:1px solid var(--border);
+  border-radius:10px;padding:8px;font-size:12px
+}
+.input input{
+  border:none;background:none;outline:none;
+  color:var(--text);width:100%
+}
+.section-title{
+  font-size:11px;color:var(--muted);
+  margin:12px 0 6px;
+  display:flex;gap:6px;align-items:center
+}
+.candidate{
+  display:flex;align-items:center;gap:10px;
+  background:#020617;border:1px solid var(--border);
+  border-radius:12px;padding:8px;margin-bottom:6px;
+  cursor:pointer;transition:.2s
+}
+.candidate:hover{border-color:var(--accent)}
+.candidate img{
+  width:36px;height:36px;border-radius:50%;object-fit:cover
+}
+.candidate span{flex:1;font-size:12px}
+.candidate i{color:var(--accent)}
+.winner{
+  border-color:var(--gold)!important;
+  box-shadow:0 0 18px #facc1566;
+  animation:pulse 1.5s infinite;
+}
+@keyframes pulse{
+  0%{box-shadow:0 0 8px #facc1555}
+  50%{box-shadow:0 0 18px #facc15aa}
+  100%{box-shadow:0 0 8px #facc1555}
+}
+canvas{max-height:180px}
+.footer{text-align:center;font-size:10px;color:var(--muted)}
+</style>
+</head>
+
+<body>
+<div class="app">
+
+<h1><i class="fas fa-vote-yea"></i> School Election</h1>
+<div class="timer" id="timer">Voting ends in: --:--:--</div>
+
+<div class="card">
+  <div class="input">
+    <i class="fas fa-id-card"></i>
+    <input id="sid" placeholder="Student ID">
+  </div>
+
+  <!-- PRESIDENT -->
+  <div class="section-title"><i class="fas fa-user-tie"></i> President</div>
+  <div class="candidate" onclick="vote(1,1)">
+    <img src="https://i.imgur.com/1XKQbQp.jpg">
+    <span>Alice</span>
+    <i class="fas fa-check"></i>
+  </div>
+  <div class="candidate" onclick="vote(1,2)">
+    <img src="https://i.imgur.com/J6l19cE.jpg">
+    <span>Bob</span>
+    <i class="fas fa-check"></i>
+  </div>
+
+  <!-- SECRETARY -->
+  <div class="section-title"><i class="fas fa-file-signature"></i> Secretary</div>
+  <div class="candidate" onclick="vote(2,3)">
+    <img src="https://i.imgur.com/3GvwNBf.jpg">
+    <span>Carol</span>
+    <i class="fas fa-check"></i>
+  </div>
+
+  <!-- TREASURER -->
+  <div class="section-title"><i class="fas fa-coins"></i> Treasurer</div>
+  <div class="candidate" onclick="vote(3,4)">
+    <img src="https://i.imgur.com/8Km9tLL.jpg">
+    <span>Dan</span>
+    <i class="fas fa-check"></i>
+  </div>
+</div>
+
+<div class="card">
+  <div class="section-title"><i class="fas fa-chart-bar"></i> Live Results</div>
+  <canvas id="chart"></canvas>
+</div>
+
+<div class="footer">Secure • One Vote Per Position</div>
+
+</div>
+
+<script>
+const API="PASTE_YOUR_WEB_APP_URL";
+const END_TIME=new Date("2026-01-25T17:00:00").getTime();
+let locked=false,chart;
+
+/* Countdown */
+setInterval(()=>{
+  const d=END_TIME-Date.now();
+  if(d<=0)return timer.innerText="Voting Closed";
+  timer.innerText=`Voting ends in: ${Math.floor(d/36e5)}h ${Math.floor(d%36e5/6e4)}m ${Math.floor(d%6e4/1e3)}s`;
+},1000);
+
+/* Vote */
+function vote(position,candidate){
+  if(locked)return;
+  const sid=document.getElementById("sid").value.trim();
+  if(!sid)return alert("Enter Student ID");
+  locked=true;
+  fetch(API,{method:"POST",body:JSON.stringify({student_id:sid,position_id:position,candidate_id:candidate})})
+    .then(r=>r.json())
+    .then(d=>{alert(d.message);locked=false});
+}
+
+/* Results + Winner Highlight */
+function load(){
+  fetch(API).then(r=>r.json()).then(d=>{
+    const labels=d.map(x=>x.name),votes=d.map(x=>x.votes);
+    const max=Math.max(...votes);
+    document.querySelectorAll(".candidate").forEach(c=>c.classList.remove("winner"));
+    d.forEach(x=>{
+      if(x.votes===max && max>0){
+        document.querySelectorAll(".candidate").forEach(el=>{
+          if(el.innerText.includes(x.name))el.classList.add("winner");
+        });
+      }
+    });
+    if(chart)chart.destroy();
+    chart=new Chart(document.getElementById("chart"),{
+      type:"bar",
+      data:{labels,datasets:[{data:votes}]},
+      options:{plugins:{legend:{display:false}}}
+    });
+  });
+}
+setInterval(load,3000);load();
+</script>
+
+
+<!--Appscript
+/* ===============================
+   CONFIGURATION
+================================ */
+const OPEN_TIME  = new Date("2026-01-25T08:00:00");
+const CLOSE_TIME = new Date("2026-01-25T17:00:00");
+
+/* ===============================
+   HANDLE VOTING
+================================ */
+function doPost(e) {
+  const data = JSON.parse(e.postData.contents || "{}");
+  const { student_id, position_id, candidate_id } = data;
+
+  if (!student_id || !position_id || !candidate_id)
+    return respond("Invalid request");
+
+  const now = new Date();
+  if (now < OPEN_TIME || now > CLOSE_TIME)
+    return respond("Voting is closed");
+
+  const ss = SpreadsheetApp.getActive();
+
+  /* Validate Student ID */
+  const students = ss.getSheetByName("Students")
+    .getRange("A2:A")
+    .getValues()
+    .flat()
+    .filter(String);
+
+  if (!students.includes(student_id))
+    return respond("Student ID not registered");
+
+  const votesSheet = ss.getSheetByName("Votes");
+  const votes = votesSheet.getDataRange().getValues();
+
+  /* One vote per position */
+  for (let i = 1; i < votes.length; i++) {
+    if (votes[i][1] === student_id && votes[i][2] == position_id)
+      return respond("You already voted for this position");
+  }
+
+  /* Record vote */
+  votesSheet.appendRow([
+    new Date(),
+    student_id,
+    position_id,
+    candidate_id
+  ]);
+
+  return respond("Vote recorded successfully");
+}
+
+/* ===============================
+   LIVE RESULTS
+================================ */
+function doGet() {
+  const ss = SpreadsheetApp.getActive();
+  const candSheet = ss.getSheetByName("Candidates");
+  const voteSheet = ss.getSheetByName("Votes");
+
+  const candidates = candSheet.getDataRange().getValues();
+  const votes = voteSheet.getDataRange().getValues();
+
+  const result = {};
+
+  for (let i = 1; i < candidates.length; i++) {
+    result[candidates[i][0]] = {
+      name: candidates[i][0],
+      votes: 0
+    };
+  }
+
+  for (let i = 1; i < votes.length; i++) {
+    const c = votes[i][3];
+    if (result[c]) result[c].votes++;
+  }
+
+  return ContentService
+    .createTextOutput(JSON.stringify(Object.values(result)))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+/* ===============================
+   RESPONSE HELPER
+================================ */
+function respond(message) {
+  return ContentService
+    .createTextOutput(JSON.stringify({ message }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+
+-->
+
+</body>
+</html>
