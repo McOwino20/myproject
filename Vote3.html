@@ -1,0 +1,75 @@
+function getSettings() {
+  const s = SpreadsheetApp.getActive().getSheetByName("Settings");
+  const rows = s.getRange("A2:B").getValues();
+  const map = {};
+  rows.forEach(r => map[r[0]] = new Date(r[1]));
+  return map;
+}
+
+function doPost(e) {
+  const data = JSON.parse(e.postData.contents || "{}");
+  const { student_id, position, candidate_id } = data;
+
+  if (!student_id || !position || !candidate_id)
+    return reply("Invalid request");
+
+  const { OPEN_TIME, CLOSE_TIME } = getSettings();
+  const now = new Date();
+
+  if (now < OPEN_TIME || now > CLOSE_TIME)
+    return reply("Voting is closed");
+
+  const ss = SpreadsheetApp.getActive();
+
+  // Student whitelist
+  const students = ss.getSheetByName("Students")
+    .getRange("A2:A").getValues().flat();
+
+  if (!students.includes(student_id))
+    return reply("Student ID not registered");
+
+  const votesSheet = ss.getSheetByName("Votes");
+  const votes = votesSheet.getDataRange().getValues();
+
+  // One vote per position
+  for (let i = 1; i < votes.length; i++) {
+    if (votes[i][1] === student_id && votes[i][2] === position)
+      return reply(`You already voted for ${position}`);
+  }
+
+  votesSheet.appendRow([
+    new Date(),
+    student_id,
+    position,
+    candidate_id
+  ]);
+
+  return reply("Vote recorded successfully");
+}
+
+function doGet() {
+  const ss = SpreadsheetApp.getActive();
+  const cand = ss.getSheetByName("Candidates").getDataRange().getValues();
+  const votes = ss.getSheetByName("Votes").getDataRange().getValues();
+
+  const results = { President: [], Secretary: [], Treasurer: [] };
+
+  for (let i = 1; i < cand.length; i++) {
+    const [id, name, position] = cand[i];
+    let count = 0;
+    for (let j = 1; j < votes.length; j++) {
+      if (votes[j][3] == id) count++;
+    }
+    results[position].push({ name, votes: count });
+  }
+
+  return ContentService
+    .createTextOutput(JSON.stringify(results))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function reply(msg) {
+  return ContentService
+    .createTextOutput(JSON.stringify({ message: msg }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
