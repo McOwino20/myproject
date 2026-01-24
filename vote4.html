@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>School Election</title>
+
+<!-- Fonts & Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root{
+  --bg:#020617;
+  --card:#0f172a;
+  --border:#1e293b;
+  --accent:#38bdf8;
+  --gold:#facc15;
+  --text:#e5e7eb;
+  --muted:#94a3b8;
+}
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  font-family:Poppins,system-ui;
+  background:linear-gradient(160deg,#020617,#020617 60%,#020617);
+  color:var(--text);
+}
+.app{max-width:900px;margin:auto;padding:14px;}
+h1{text-align:center;font-size:20px;margin-bottom:6px;}
+#status{text-align:center;font-size:13px;margin-bottom:12px;}
+#timer{text-align:center;font-size:12px;color:var(--gold);margin-bottom:10px;}
+.card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:12px;
+  margin-bottom:14px;
+}
+.input{
+  display:flex;align-items:center;gap:8px;
+  background:#020617;border:1px solid var(--border);
+  padding:8px;border-radius:10px;
+}
+.input input{width:100%;background:none;border:none;outline:none;color:var(--text);}
+.section{margin-top:14px;}
+.section-title{font-size:14px;margin-bottom:8px;color:var(--accent);}
+.candidate{
+  display:flex;align-items:center;gap:10px;
+  background:#020617;border:1px solid var(--border);
+  border-radius:12px;padding:8px;margin-bottom:6px;cursor:pointer;
+  transition:0.2s;
+}
+.candidate:hover{border-color:var(--accent);}
+.candidate img{width:38px;height:38px;border-radius:50%;}
+.candidate span{flex:1;}
+.winner{border-color:var(--gold);box-shadow:0 0 10px #facc1555;}
+.results{display:grid;grid-template-columns:1fr;gap:10px;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th,td{border:1px solid var(--border);padding:6px;text-align:left;}
+th{background:#020617;}
+@media(min-width:768px){.results{grid-template-columns:1fr 1fr;}}
+.footer{text-align:center;font-size:11px;color:var(--muted);}
+
+/* Confirmation Modal */
+#confirmModal{display:none;position:fixed;inset:0;background:rgba(2,6,23,.85);
+backdrop-filter:blur(8px);align-items:center;justify-content:center;z-index:999;}
+#confirmModal .modal-content{background:#0f172a;border:1px solid #1e293b;
+border-radius:16px;padding:16px;width:90%;max-width:320px;text-align:center;}
+#confirmModal img{width:60px;height:60px;border-radius:50%;margin:10px auto;display:block;}
+#confirmModal button{flex:1;padding:8px;border-radius:10px;cursor:pointer;}
+#confirmModal .buttons{display:flex;gap:8px;margin-top:12px;}
+#confirmModal .cancel{background:#020617;color:#e5e7eb;border:1px solid #1e293b;}
+#confirmModal .confirm{background:#38bdf8;color:#020617;border:none;}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <h1><i class="fas fa-vote-yea"></i> School Election</h1>
+  <div id="status">Loading...</div>
+  <div id="timer">Time remaining: --:--:--</div>
+
+  <!-- Student ID input -->
+  <div class="card">
+    <div class="input">
+      <i class="fas fa-id-card"></i>
+      <input id="sid" placeholder="Enter Student ID">
+    </div>
+  </div>
+
+  <!-- PRESIDENT -->
+  <div class="card section" data-pos="President">
+    <div class="section-title">President</div>
+    <div class="candidate" onclick="vote('President','Alice')">
+      <img src="https://i.imgur.com/1XKQbQp.jpg"><span>Alice</span>
+    </div>
+    <div class="candidate" onclick="vote('President','Bob')">
+      <img src="https://i.imgur.com/J6l19cE.jpg"><span>Bob</span>
+    </div>
+    <div class="results">
+      <canvas id="PresidentChart"></canvas>
+      <table id="PresidentTable"></table>
+    </div>
+  </div>
+
+  <!-- SECRETARY -->
+  <div class="card section" data-pos="Secretary">
+    <div class="section-title">Secretary</div>
+    <div class="candidate" onclick="vote('Secretary','Carol')">
+      <img src="https://i.imgur.com/3GvwNBf.jpg"><span>Carol</span>
+    </div>
+    <div class="candidate" onclick="vote('Secretary','Dave')">
+      <img src="https://i.imgur.com/8Km9tLL.jpg"><span>Dave</span>
+    </div>
+    <div class="results">
+      <canvas id="SecretaryChart"></canvas>
+      <table id="SecretaryTable"></table>
+    </div>
+  </div>
+
+  <!-- TREASURER -->
+  <div class="card section" data-pos="Treasurer">
+    <div class="section-title">Treasurer</div>
+    <div class="candidate" onclick="vote('Treasurer','Eve')">
+      <img src="https://i.imgur.com/8Km9tLL.jpg"><span>Eve</span>
+    </div>
+    <div class="candidate" onclick="vote('Treasurer','Frank')">
+      <img src="https://i.imgur.com/J6l19cE.jpg"><span>Frank</span>
+    </div>
+    <div class="results">
+      <canvas id="TreasurerChart"></canvas>
+      <table id="TreasurerTable"></table>
+    </div>
+  </div>
+
+  <div class="footer">Secure • One vote per position</div>
+</div>
+
+<!-- CONFIRMATION MODAL -->
+<div id="confirmModal">
+  <div class="modal-content">
+    <h3>Confirm Your Vote</h3>
+    <p style="font-size:12px;color:#94a3b8">You are about to vote for:</p>
+    <img id="confirmImg">
+    <strong id="confirmCandidate"></strong>
+    <div style="font-size:12px;color:#38bdf8" id="confirmPosition"></div>
+    <p style="font-size:11px;color:#facc15;margin-top:8px">⚠️ This action cannot be undone</p>
+    <div class="buttons">
+      <button class="cancel" onclick="closeConfirm()">Cancel</button>
+      <button class="confirm" onclick="submitVote()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_URL = "PASTE_YOUR_DEPLOYED_APPS_SCRIPT_URL";
+let charts = {};
+let pendingVote = null;
+let votedPositions = {};
+let END_TIME = new Date("2026-01-25T17:00:00").getTime(); // replace with your voting end time
+
+// Countdown Timer
+function updateTimer(){
+  const now = Date.now();
+  const diff = END_TIME - now;
+  if(diff<=0){
+    document.getElementById("timer").innerText="⛔ Voting Closed";
+    document.querySelectorAll(".candidate").forEach(c=>c.style.pointerEvents="none");
+    return;
+  }
+  const h = Math.floor(diff/3600000);
+  const m = Math.floor((diff%3600000)/60000);
+  const s = Math.floor((diff%60000)/1000);
+  document.getElementById("timer").innerText = `Time remaining: ${h}h ${m}m ${s}s`;
+}
+setInterval(updateTimer,1000);
+updateTimer();
+
+// Open confirmation modal
+function vote(position,candidate){
+  if(votedPositions[position]) return alert(`You already voted for ${position}`);
+  if(Date.now() > END_TIME) return alert("Voting is closed");
+
+  const sid = document.getElementById("sid").value.trim();
+  if(!sid) return alert("Enter Student ID");
+
+  const card = event.currentTarget;
+  const img = card.querySelector("img").src;
+
+  pendingVote = {position,candidate};
+
+  document.getElementById("confirmImg").src = img;
+  document.getElementById("confirmCandidate").innerText = candidate;
+  document.getElementById("confirmPosition").innerText = position;
+  document.getElementById("confirmModal").style.display = "flex";
+}
+
+function closeConfirm(){pendingVote=null;document.getElementById("confirmModal").style.display="none";}
+
+function submitVote(){
+  if(!pendingVote) return;
+  const sid=document.getElementById("sid").value.trim();
+  const {position,candidate} = pendingVote;
+  document.getElementById("confirmModal").style.display="none";
+
+  fetch(API_URL,{
+    method:"POST",
+    body:JSON.stringify({student_id:sid,position:position,candidate:candidate})
+  })
+  .then(r=>r.json())
+  .then(d=>{
+    alert(d.message);
+    if(d.status!=="error") votedPositions[position] = candidate;
+    pendingVote=null;
+    load();
+  });
+}
+
+// Render chart + table
+function render(position,data){
+  if(charts[position]) charts[position].destroy();
+  charts[position]=new Chart(document.getElementById(position+"Chart"),{
+    type:"bar",
+    data:{labels:data.map(x=>x.candidate),datasets:[{data:data.map(x=>x.votes)}]},
+    options:{plugins:{legend:{display:false}}}
+  });
+
+  const t=document.getElementById(position+"Table");
+  t.innerHTML="<tr><th>Candidate</th><th>Votes</th></tr>";
+  const max = Math.max(...data.map(x=>x.votes));
+  data.forEach(r=>{
+    const rowClass = r.votes===max?'winner':'';
+    t.innerHTML+=`<tr class="${rowClass}"><td>${r.candidate}</td><td>${r.votes}</td></tr>`;
+  });
+
+  document.querySelectorAll(`[data-pos="${position}"] .candidate`).forEach(c=>{
+    const candidateName = c.querySelector("span").innerText;
+    if(votedPositions[position] && candidateName===votedPositions[position]){
+      c.classList.add("winner");
+      if(!c.querySelector("small")) c.innerHTML+=` <small style="color:var(--gold);font-size:10px">✅ You voted</small>`;
+    }
+    c.style.pointerEvents = votedPositions[position] ? "none" : "auto";
+  });
+}
+
+// Show/hide position sections
+function toggle(position,show){
+  document.querySelectorAll(`[data-pos="${position}"]`).forEach(el=>el.style.display=show?"block":"none");
+}
+
+// Load all data from backend
+function load(){
+  fetch(API_URL).then(r=>r.json()).then(d=>{
+    document.getElementById("status").innerHTML = d.votingOpen?"🟢 Voting In Progress":"⛔ Voting Closed";
+    if(!d.votingOpen) document.querySelectorAll(".candidate").forEach(c=>c.style.pointerEvents="none");
+
+    toggle("President",d.show.President);
+    toggle("Secretary",d.show.Secretary);
+    toggle("Treasurer",d.show.Treasurer);
+
+    if(d.studentVotes) votedPositions = d.studentVotes;
+
+    Object.keys(d.results).forEach(p=>render(p,d.results[p]));
+  });
+}
+setInterval(load,4000);
+load();
+</script>
+<!--Appscript
+/* ===============================
+   CONFIGURATION
+================================ */
+const OPEN_TIME  = new Date("2026-01-25T08:00:00"); // Voting start
+const CLOSE_TIME = new Date("2026-01-25T17:00:00"); // Voting end
+
+const POSITIONS = ["President","Secretary","Treasurer"];
+
+/* ===============================
+   HANDLE VOTING (POST)
+================================ */
+function doPost(e) {
+  const data = JSON.parse(e.postData.contents || "{}");
+  const { student_id, position, candidate } = data;
+
+  if (!student_id || !position || !candidate)
+    return respond("Invalid request", "error");
+
+  const now = new Date();
+  if (now < OPEN_TIME || now > CLOSE_TIME)
+    return respond("Voting is closed", "error");
+
+  const ss = SpreadsheetApp.getActive();
+  
+  // Validate Student ID
+  const students = ss.getSheetByName("Students").getRange("A2:A").getValues().flat().filter(String);
+  if (!students.includes(student_id))
+    return respond("Student ID not registered", "error");
+
+  // Check if student already voted for this position
+  const votesSheet = ss.getSheetByName("Votes");
+  const votes = votesSheet.getDataRange().getValues();
+  for(let i=1;i<votes.length;i++){
+    if(votes[i][1]===student_id && votes[i][2]===position)
+      return respond(`You already voted for ${position}`, "error");
+  }
+
+  // Record vote
+  votesSheet.appendRow([new Date(), student_id, position, candidate]);
+  return respond(`Vote for ${candidate} recorded successfully`, "success");
+}
+
+/* ===============================
+   LIVE RESULTS (GET)
+================================ */
+function doGet(e) {
+  const ss = SpreadsheetApp.getActive();
+  const candSheet = ss.getSheetByName("Candidates").getDataRange().getValues();
+  const votesSheet = ss.getSheetByName("Votes").getDataRange().getValues();
+
+  const results = {};
+  POSITIONS.forEach(pos => results[pos] = []);
+
+  // Initialize candidates per position
+  for(let i=1;i<candSheet.length;i++){
+    const name = candSheet[i][0];
+    const pos = candSheet[i][1];
+    results[pos].push({candidate:name,votes:0});
+  }
+
+  // Count votes
+  for(let i=1;i<votesSheet.length;i++){
+    const pos = votesSheet[i][2];
+    const name = votesSheet[i][3];
+    const c = results[pos].find(x=>x.candidate===name);
+    if(c) c.votes++;
+  }
+
+  const votingOpen = (new Date() >= OPEN_TIME && new Date() <= CLOSE_TIME);
+
+  return ContentService.createTextOutput(JSON.stringify({
+    votingOpen:votingOpen,
+    show:{
+      President:true,
+      Secretary:true,
+      Treasurer:true
+    },
+    results:results
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/* ===============================
+   HELPER
+================================ */
+function respond(message,status){
+  return ContentService.createTextOutput(JSON.stringify({message,status}))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+-->
+
+
+
+</body>
+</html>
