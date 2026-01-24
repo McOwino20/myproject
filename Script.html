@@ -1,0 +1,87 @@
+/* ================= CONFIG ================= */
+const OPEN_TIME  = new Date("2026-01-25T08:00:00+03:00");
+const CLOSE_TIME = new Date("2026-01-25T17:00:00+03:00");
+const POSITIONS = ["President","Secretary","Treasurer"];
+
+/* ================= POST: VOTE ================= */
+function doPost(e) {
+  const data = JSON.parse(e.postData.contents || "{}");
+  const { student_id, position, candidate } = data;
+
+  if (!student_id || !position || !candidate)
+    return respond("Invalid request","error");
+
+  const now = new Date();
+  if (now < OPEN_TIME || now > CLOSE_TIME)
+    return respond("⛔ Voting Closed","error");
+
+  const ss = SpreadsheetApp.getActive();
+
+  /* Validate student */
+  const students = ss.getSheetByName("Students")
+    .getRange("A2:A").getValues().flat().filter(String);
+
+  if (!students.includes(student_id))
+    return respond("Student ID not registered","error");
+
+  /* Prevent multiple votes per position */
+  const votesSheet = ss.getSheetByName("Votes");
+  const votes = votesSheet.getDataRange().getValues();
+
+  for (let i = 1; i < votes.length; i++) {
+    if (votes[i][1] === student_id && votes[i][2] === position)
+      return respond(`Already voted for ${position}`,"error");
+  }
+
+  votesSheet.appendRow([
+    new Date(),
+    student_id,
+    position,
+    candidate
+  ]);
+
+  return respond(`Vote for ${candidate} recorded successfully`,"success");
+}
+
+/* ================= GET: RESULTS ================= */
+function doGet() {
+  const ss = SpreadsheetApp.getActive();
+  const cand = ss.getSheetByName("Candidates").getDataRange().getValues();
+  const votes = ss.getSheetByName("Votes").getDataRange().getValues();
+
+  const results = {};
+  POSITIONS.forEach(p => results[p] = []);
+
+  /* Init candidates */
+  for (let i = 1; i < cand.length; i++) {
+    results[cand[i][1]].push({
+      candidate: cand[i][0],
+      votes: 0
+    });
+  }
+
+  /* Count votes */
+  for (let i = 1; i < votes.length; i++) {
+    const pos = votes[i][2];
+    const name = votes[i][3];
+    const c = results[pos].find(x => x.candidate === name);
+    if (c) c.votes++;
+  }
+
+  return ContentService.createTextOutput(JSON.stringify({
+    votingOpen: new Date() >= OPEN_TIME && new Date() <= CLOSE_TIME,
+    show:{
+      President:true,
+      Secretary:true,
+      Treasurer:true
+    },
+    results
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/* ================= HELPER ================= */
+function respond(message,status){
+  return ContentService.createTextOutput(
+    JSON.stringify({message,status})
+  ).setMimeType(ContentService.MimeType.JSON);
+}
