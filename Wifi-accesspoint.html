@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MASC Wi-Fi Login</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  height:100vh;
+  width:100vw;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* Fully visible background image */
+  background-image: url("/favicon.png");
+  background-size: contain;          /* Full image visible */
+  background-position: center;       /* Center image */
+  background-repeat: no-repeat;      /* No tiling */
+  background-color: rgba(2,6,23,0.6); /* Overlay for readability */
+  background-blend-mode: overlay;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #fff;
+}
+
+.card {
+  width: 90%;
+  max-width: 420px;
+  padding: 44px 36px;
+  border-radius: 28px;
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(22px);
+  border: 1px solid rgba(255,255,255,0.2);
+  box-shadow: 0 30px 70px rgba(0,0,0,0.6);
+  text-align: center;
+}
+
+.icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 18px;
+  border-radius: 50%;
+  background: linear-gradient(135deg,#22d3ee,#0ea5e9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 12px 30px rgba(34,211,238,.45);
+}
+
+.icon svg {
+  width: 34px;
+  fill: #020617;
+}
+
+h2 { font-size: 1.7rem; margin-bottom: 10px; }
+
+p { font-size: .95rem; opacity: .9; line-height: 1.6; margin-bottom: 16px; }
+a{
+  color: yellow;
+  text-decoration:none;
+}
+input[type="password"] {
+  width: 100%;
+  padding: 14px;
+  border-radius: 14px;
+  border: none;
+  margin-bottom: 20px;
+  font-size: 1rem;
+}
+
+button {
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-radius: 18px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: linear-gradient(135deg,#38bdf8,#0ea5e9);
+  color: #020617;
+  box-shadow: 0 14px 35px rgba(56,189,248,.45);
+}
+
+button:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+.note { margin-top: 20px; font-size: .75rem; opacity: .65; }
+.error { color: #ff6b6b; margin-bottom: 14px; font-size: .85rem; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="icon">
+    <svg viewBox="0 0 24 24">
+      <path d="M12 18a2 2 0 1 0 .001-3.999A2 2 0 0 0 12 18zm-4.24-3.76a6 6 0 0 1 8.48 0l1.42-1.42a8 8 0 0 0-11.32 0l1.42 1.42zm-2.83-2.83a10 10 0 0 1 14.14 0l1.41-1.41a12 12 0 0 0-16.96 0l1.41 1.41z"/>
+    </svg>
+  </div>
+
+  <h2>MASC Wi-Fi</h2>
+  <p>Enter the password to access the network.</p>
+
+  <div class="error" id="error"></div>
+  <input type="password" id="password" placeholder="Enter password"/>
+  <button id="connectBtn">Connect</button>
+
+  <div class="note">Powered by <a href="https://a-finder.vercel.app">McOwino</a></div>
+</div>
+
+<script>
+const API_URL = "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec"; // Replace with your Apps Script URL
+const btn = document.getElementById("connectBtn");
+const passInput = document.getElementById("password");
+const errorDiv = document.getElementById("error");
+
+btn.onclick = async () => {
+  errorDiv.textContent = "";
+  btn.disabled = true;
+  btn.textContent = "Connecting...";
+
+  const password = passInput.value.trim();
+  if(!password){ 
+    errorDiv.textContent = "Please enter password"; 
+    btn.disabled=false; 
+    btn.textContent="Connect"; 
+    return;
+  }
+
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({password}),
+      headers: {"Content-Type":"application/json"}
+    });
+    const data = await res.json();
+
+    if(data.status === "ok"){
+      window.location.replace(data.redirect);
+    } else {
+      errorDiv.textContent = data.message || "Incorrect password";
+    }
+
+  } catch(e){
+    errorDiv.textContent = "Network error. Try again";
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Connect";
+  }
+};
+</script>
+<!--Appscript
+function doPost(e) {
+  const SHEET_ID = "YOUR_SHEET_ID"; // Replace with your sheet ID
+  const CONFIG_SHEET = "config";
+  const LOG_SHEET = "Login Credential";
+
+  try {
+    const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(CONFIG_SHEET);
+    const rows = sheet.getDataRange().getValues();
+    let config = {};
+    rows.forEach(row => { if(row[0]) config[row[0]] = row[1]; });
+
+    if(config.enabled !== true && config.enabled !== "true") {
+      return json({status:"disabled", message:"Network access disabled"});
+    }
+
+    const body = JSON.parse(e.postData.contents || '{}');
+    const userPassword = body.password || "";
+
+    if(userPassword !== config.password) {
+      return json({status:"error", message:"Incorrect password"});
+    }
+
+    // Log successful login
+    const logSheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(LOG_SHEET);
+
+    const ip = e ? (e.parameter["client_ip"] || "Unknown") : "Unknown";
+    const userAgent = e ? e.postData.headers["user-agent"] || "Unknown" : "Unknown";
+
+    logSheet.appendRow([
+      new Date(),       // Timestamp
+      ip,               // IP
+      userAgent,        // Browser/Device
+      config.network_name || "Wi-Fi",
+      config.vendor || "Router"
+    ]);
+
+    return json({
+      status: "ok",
+      redirect: config.redirect_url,
+      network: config.network_name || "Wi-Fi",
+      vendor: config.vendor || "Router"
+    });
+
+  } catch(err) {
+    return json({status:"error", message:"Backend error"});
+  }
+}
+
+function json(data){
+  return ContentService.createTextOutput(JSON.stringify(data))
+                       .setMimeType(ContentService.MimeType.JSON);
+}
+
+-->
+</body>
+</html>
