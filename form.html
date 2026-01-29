@@ -321,6 +321,133 @@ function sendMassEmail(subject, body) {
     `Mass email successfully sent to ${sent} recipients.`
   );
 }
+
+
+
+<!--customized email template
+const currentDate = new Date().toLocaleDateString('en-GB', {
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric'
+});
+
+htmlBody: `
+<div style="
+  max-width:600px;
+  margin:0 auto;
+  padding:30px;
+  font-family:Arial, Helvetica, sans-serif;
+  background:#ffffff;
+  border-radius:14px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.08);
+">
+
+  <h2 style="
+    color:#111827;
+    margin-bottom:10px;
+    font-size:22px;
+  ">
+    Hello ${name}
+  </h2>
+
+  <!-- Date -->
+  <p style="
+    font-size:13px;
+    color:#9ca3af;
+    margin-bottom:20px;
+  ">
+    ${currentDate}
+  </p>
+
+  <p style="
+    color:#374151;
+    font-size:16px;
+    line-height:1.6;
+    margin-bottom:18px;
+  ">
+    Thank you for reaching out to us. We’ve received your message and our team is already reviewing it.
+  </p>
+
+  <div style="
+    background:#f9fafb;
+    padding:16px;
+    border-left:4px solid #6366f1;
+    border-radius:8px;
+    margin-bottom:22px;
+  ">
+    <p style="
+      margin:0;
+      color:#4b5563;
+      font-size:15px;
+    ">
+      Expect a response shortly — we appreciate your patience.
+    </p>
+  </div>
+
+  <p style="
+    color:#374151;
+    font-size:15px;
+    margin-bottom:32px;
+  ">
+    If your request is urgent, feel free to reply directly to this email.
+  </p>
+
+  <hr style="
+    border:none;
+    border-top:1px solid #e5e7eb;
+    margin:26px 0;
+  " />
+
+  <!-- Signature -->
+  <p style="
+    color:#6b7280;
+    font-size:14px;
+    margin-bottom:6px;
+  ">
+    Kind regards,
+  </p>
+
+  <p style="
+    font-size:15px;
+    font-weight:600;
+    color:#111827;
+    margin:0;
+  ">
+    McOwino
+  </p>
+
+  <!-- Footer -->
+  <div style="
+    margin-top:26px;
+    padding-top:18px;
+    border-top:1px solid #f0f0f0;
+  ">
+
+    <p style="
+      font-size:12px;
+      color:#9ca3af;
+      line-height:1.6;
+      margin:0 0 10px 0;
+    ">
+      This email was sent in response to a request made via our platform.
+      If you did not initiate this request, please disregard this message.
+    </p>
+
+    <p style="
+      font-size:12px;
+      color:#9ca3af;
+      margin:0;
+    ">
+      © ${new Date().getFullYear()} McOwino. All rights reserved.
+    </p>
+
+  </div>
+
+</div>
+
+
+-->
 https://script.google.com/macros/s/AKfycbzQyHl9ofUmDkKPxc3ix9q_V-oljugupT2pKuTp8OJuquVWQsiukgU3xUwLtaJDKxbxOQ/exec
 -->
 
