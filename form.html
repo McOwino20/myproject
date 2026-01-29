@@ -208,6 +208,9 @@ form.addEventListener("submit", async (e) => {
 </script>
 
 <!--Appscript
+/*************************************************
+ * CONTACT FORM BACKEND + AUTO-REPLY
+ *************************************************/
 function doPost(e) {
   try {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
@@ -258,6 +261,65 @@ function doPost(e) {
       JSON.stringify({ status: "error", message: err.toString() })
     ).setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+
+/*************************************************
+ * MANUAL MASS EMAIL FEATURE (ADMIN ONLY)
+ *************************************************/
+
+// Add menu when sheet opens
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu("📧 Email Tools")
+    .addItem("Send Mass Email", "massEmailPrompt")
+    .addToUi();
+}
+
+// Prompt admin for subject & message
+function massEmailPrompt() {
+  const ui = SpreadsheetApp.getUi();
+
+  const subject = ui.prompt(
+    "Mass Email",
+    "Enter email subject:",
+    ui.ButtonSet.OK_CANCEL
+  );
+  if (subject.getSelectedButton() !== ui.Button.OK) return;
+
+  const body = ui.prompt(
+    "Mass Email",
+    "Enter email message (HTML allowed):",
+    ui.ButtonSet.OK_CANCEL
+  );
+  if (body.getSelectedButton() !== ui.Button.OK) return;
+
+  sendMassEmail(subject.getResponseText(), body.getResponseText());
+}
+
+// Send email to all addresses in the sheet
+function sendMassEmail(subject, body) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const data = sheet.getDataRange().getValues();
+
+  let sent = 0;
+
+  for (let i = 1; i < data.length; i++) {
+    const email = data[i][2]; // Column C = Email
+
+    if (email && email.includes("@")) {
+      MailApp.sendEmail({
+        to: email,
+        subject: subject,
+        htmlBody: body
+      });
+      sent++;
+    }
+  }
+
+  SpreadsheetApp.getUi().alert(
+    `Mass email successfully sent to ${sent} recipients.`
+  );
 }
 https://script.google.com/macros/s/AKfycbzQyHl9ofUmDkKPxc3ix9q_V-oljugupT2pKuTp8OJuquVWQsiukgU3xUwLtaJDKxbxOQ/exec
 -->
